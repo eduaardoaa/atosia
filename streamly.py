@@ -1,4 +1,6 @@
 import streamlit as st
+import requests
+import json
 
 # Configuração da página
 st.set_page_config(
@@ -10,13 +12,10 @@ st.set_page_config(
 # CSS customizado para o estilo WhatsApp
 st.markdown("""
 <style>
-    /* Container das mensagens */
     .message-container {
         display: flex;
         margin-bottom: 12px;
     }
-    
-    /* Mensagens do usuário (direita) */
     .user-message {
         background-color: #DCF8C6;
         color: #000;
@@ -26,8 +25,6 @@ st.markdown("""
         max-width: 70%;
         box-shadow: 0 1px 1px rgba(0,0,0,0.1);
     }
-    
-    /* Mensagens do assistente (esquerda) */
     .assistant-message {
         background-color: #ECE5DD;
         color: #000;
@@ -37,8 +34,6 @@ st.markdown("""
         max-width: 70%;
         box-shadow: 0 1px 1px rgba(0,0,0,0.1);
     }
-    
-    /* Nome do remetente */
     .sender-name {
         font-size: 0.8em;
         font-weight: bold;
@@ -48,11 +43,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Título da aplicação
-st.title("🤖 Assistente Atos Capita")
+st.title("🤖 Assistente Atos Capital")
 
 # Inicialização do histórico de conversa
 if 'historico' not in st.session_state:
     st.session_state.historico = []
+
+# Função para enviar mensagem para o webhook
+def enviar_para_webhook(mensagem):
+    webhook_url = "https://n8n-n8n.zofbat.easypanel.host/webhook-test/pergunta-whatsapp"
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    payload = {
+        "pergunta": mensagem
+    }
+    
+    try:
+        response = requests.post(
+            webhook_url,
+            headers=headers,
+            data=json.dumps(payload)
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro ao enviar para o webhook: {str(e)}")
+        return None
 
 # Sidebar
 with st.sidebar:
@@ -64,20 +82,18 @@ with st.sidebar:
 # Área de conversa
 st.header("💬 Conversa com Atos")
 
-# Exibir histórico de conversa no estilo WhatsApp
+# Exibir histórico de conversa
 for mensagem in st.session_state.historico:
-    if mensagem["autor"] == "Usuário":
-        # Mensagem do assistente (esquerda)
+    if mensagem["autor"] == "Atos Capital IA":
         st.markdown(f"""
         <div class="message-container">
             <div class="assistant-message">
-                <div class="sender-name">Usuário</div>
+                <div class="sender-name">Atos Capital IA</div>
                 {mensagem['conteudo']}
             </div>
         </div>
         """, unsafe_allow_html=True)
     else:
-        # Mensagem do usuário (direita)
         st.markdown(f"""
         <div class="message-container">
             <div class="user-message">
@@ -95,8 +111,18 @@ if prompt := st.chat_input("Digite sua mensagem..."):
         "conteudo": prompt
     })
     
-    # Resposta simulada do assistente
-    resposta = "Esta é uma resposta simulada. A funcionalidade de IA foi desativada nesta versão."
+    # Mostra spinner enquanto processa
+    with st.spinner("Processando sua pergunta..."):
+        # Envia para o webhook e obtém resposta
+        resposta_webhook = enviar_para_webhook(prompt)
+        
+        # Só aceita a resposta se vier do webhook
+        if resposta_webhook and "resposta" in resposta_webhook:
+            resposta = resposta_webhook["resposta"]
+        else:
+            # Não adiciona resposta se não vier do webhook
+            st.error("Não recebi uma resposta válida do serviço.")
+            st.rerun()
     
     # Adiciona resposta ao histórico
     st.session_state.historico.append({
@@ -108,3 +134,5 @@ if prompt := st.chat_input("Digite sua mensagem..."):
     st.rerun()
 
 # Rodapé
+st.markdown("---")
+st.caption("Assistente Atos Capital v1.0")
