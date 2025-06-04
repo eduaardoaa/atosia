@@ -51,7 +51,7 @@ if 'historico' not in st.session_state:
 
 # Função para enviar mensagem para o webhook
 def enviar_para_webhook(mensagem):
-    webhook_url = "https://n8n-n8n.zofbat.easypanel.host/webhook-test/pergunta-whatsapp"
+    webhook_url = "https://n8n-n8n.zofbat.easypanel.host/webhook/pergunta-whatsapp"
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json"
